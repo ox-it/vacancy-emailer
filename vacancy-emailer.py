@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import email.mime.multipart
 import email.mime.text
@@ -57,9 +58,9 @@ class VacancyEmailer(object):
         self.send_email(msg)
 
     def get_vacancies(self):
-        return etree.parse(urllib.urlopen(feed_url))
+        return etree.parse(urllib.urlopen(self.feed_url))
 
-    def generate_email_bodies(self):
+    def generate_email_bodies(self, vacancies):
         html_vacancies = E('div')
         html = E('html',
                  E('head', E('style', self.html_css, type='text/css')),
@@ -163,8 +164,36 @@ class OnlyFirstWorkingDayOfWeekMixin(object):
 
         super(OnlyFirstWorkingDayOfWeekMixin, self).__call__(*arg, **kwargs)
 
+class PrintEmailInsteadMixin(object):
+    def send_email(self, msg):
+        print msg.as_string()
+
 if __name__ == '__main__':
-    if '-v' in sys.argv:
-        logging.basicConfig(level=logging.INFO)
-    cls = type('VacancyEmailer', (OnlyFirstWorkingDayOfWeekMixin, VacancyEmailer), {})
+    argparser = argparse.ArgumentParser(
+        description="Send emails about vacancies")
+    argparser.add_argument('-l', '--log-level',
+                           dest='loglevel', action='store',
+                           help="Python logging level")
+    argparser.add_argument('-d', '--dry-run',
+                           dest='dry_run', action='store_true',
+                           help="Print email instead of emailing it")
+    argparser.add_argument('-w', '--only-first-working-day',
+                           dest='first_working_day', action='store_true',
+                           help="Only send if today is the first working day of the week")
+
+    args = argparser.parse_args()
+    if args.loglevel:
+        try:
+            logging.basicConfig(level=getattr(logging, args.loglevel.upper()))
+        except AttributeError:
+            sys.stderr.write("{0} is not a valid log level".format(args.loglevel.upper()))
+            sys.exit(1)
+
+    bases = (VacancyEmailer,)
+    if args.first_working_day:
+        bases = (OnlyFirstWorkingDayOfWeekMixin,) + bases
+    if args.dry_run:
+        bases = (PrintEmailInsteadMixin,) + bases
+
+    cls = type('VacancyEmailer', bases, {})
     cls()()
