@@ -10,7 +10,7 @@ You'll need to install its dependencies listed in `requirements.txt` using e.g.:
 
 Execute it with `-h` or `--help` for details of command-line options.
 
-Dy default, it expects various things in its environment. See the sample
+By default, it expects various things in its environment. See the sample
 `example-env.sh` for details of what needs to be available. You can probably
 tweak this example for your own purposes to get started quickly.
 
