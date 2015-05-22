@@ -149,13 +149,13 @@ class OnlyFirstWorkingDayOfWeekMixin(object):
             return (d.weekday() < 5                            # Not a weekend
                 and d not in bank_holidays                     # Not a bank holiday
                 and not (d.month == 12 and 25 <= d.day <= 31)) # Not in Christmas closedown
-        
+
+        # Only send if today is actually a working day, and...
         if not working_day(today):
             logger.info("Today is not a working day; not continuing")
             return
         
-        # Look back through the week, starting yesterday. If any of those days
-        # is a working day, stop now. 
+        # Look back through the week. If any of those days was also a working day, stop now.
         for i in range(today.weekday(), 0, -1):
             previous_date = today - datetime.timedelta(i)
             if working_day(previous_date):
