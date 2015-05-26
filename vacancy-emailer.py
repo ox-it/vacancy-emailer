@@ -71,12 +71,14 @@ class VacancyEmailer(object):
         for i, vacancy in enumerate(vacancies.xpath('/vacancies/vacancy')):
             html_description = etree.fromstring(vacancy.xpath("description[@media_type='text/html']")[0].text,
                                                 parser=etree.HTMLParser())[0][0]
-            description = html_description.xpath(".//text()[normalize-space(.) and not(contains(., 'INTERNAL'))]")[0].strip()
-            html_description = E('div', description, **{'class': 'description'})
+            first_para = html_description.xpath(".//text()[normalize-space(.) and not(contains(., 'INTERNAL') or contains(., 'ADVERTISEMENT'))]")[0].strip()
+            html_first_para = E('div', first_para, **{'class': 'description'})
+            tags = []
             if 'INTERNAL' in html_description.text:
-                html_internal = ' (internal applicants only)'
-            else:
-                html_internal = ''
+                tags.append('internal applicants only')
+            if 'ADVERTISEMENT' in html_description.text:
+                tags.append('re-advertisement')
+            tags = ' ({0})'.format(', '.join(tags)) if tags else ''
             try:
                 closes = dateutil.parser.parse(vacancy.find('closes').text)
                 closes = closes.strftime('%a, %d %b %Y, %I:%M %p')
@@ -88,10 +90,10 @@ class VacancyEmailer(object):
                   E('span', vacancy.find('salary').find('label').text, **{'class': 'salary'}),
                   '; closes: ',
                   E('span', closes, **{'class': 'closes'}),
-                  html_internal,
+                  tags,
                   **{'class': 'byline'}
                 ),
-                html_description,
+                html_first_para,
                 E('div',
                   E('a', u'More details\N{HORIZONTAL ELLIPSIS}', href=vacancy.find('webpage').text)),
                 **{'class': 'vacancy'}
@@ -106,9 +108,9 @@ class VacancyEmailer(object):
                 vacancy.find('salary').find('label').text,
                 u'\nCloses: ',
                 closes,
-                html_internal,
+                tags,
                 u'\n\n',
-                textwrap.fill(description),
+                textwrap.fill(first_para),
                 u'\n\n'
                 u'More details: https://data.ox.ac.uk/v/',
                 vacancy.attrib['id'],
