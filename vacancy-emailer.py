@@ -133,8 +133,8 @@ class VacancyEmailer(object):
 
     def send_email(self, msg):
         s = smtplib.SMTP(self.smtp_server)
-        s.sendmail(email.utils.parseaddr(email_from)[1],
-                   email.utils.parseaddr(email_to)[1],
+        s.sendmail(email.utils.parseaddr(self.email_from)[1],
+                   email.utils.parseaddr(self.email_to)[1],
                    msg.as_string())
         s.quit()
 
