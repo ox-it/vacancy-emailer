@@ -1,3 +1,7 @@
+#!/bin/env python3
+
+from __future__ import print_function
+
 import argparse
 import datetime
 import email.mime.multipart
@@ -49,7 +53,7 @@ class VacancyEmailer(object):
 
     @property
     def html_css(self):
-        return open(os.environ['HTML_CSS_FILE'], 'rb').read()
+        return open(os.environ['HTML_CSS_FILE'], 'rb').read().decode('utf-8')
 
     @property
     def text_preamble(self):
