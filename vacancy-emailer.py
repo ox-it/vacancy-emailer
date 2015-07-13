@@ -9,16 +9,20 @@ import os
 import smtplib
 import sys
 import textwrap
-import urllib
+import urllib.request
 
 import dateutil.parser
 from inlinestyler.utils import inline_css
 from lxml import etree
 from lxml.builder import E
+import requests
 
 logger = logging.getLogger(__name__)
 
 class VacancyEmailer(object):
+    def __init__(self, seen_before):
+        self._seen_before = os.path.expanduser(seen_before) if seen_before else None
+
     @property
     def feed_url(self):
         return os.environ['FEED_URL']
@@ -53,14 +57,27 @@ class VacancyEmailer(object):
 
     def __call__(self):
         vacancies = self.get_vacancies()
-        html, text = self.generate_email_bodies(vacancies)
+
+        current_vacancies = set(vacancies.xpath('/vacancies/vacancy/@id'))
+        if self._seen_before and os.path.exists(self._seen_before):
+            seen_vacancies = set(open(self._seen_before, 'r').read().split())
+            new_vacancies = current_vacancies - seen_vacancies
+        else:
+            new_vacancies = set()
+
+        html, text = self.generate_email_bodies(vacancies, new_vacancies)
         msg = self.compose_email(html, text)
         self.send_email(msg)
 
-    def get_vacancies(self):
-        return etree.parse(urllib.urlopen(self.feed_url))
+        if self._seen_before:
+            with open(self._seen_before, 'w') as f:
+                for vacancy_id in sorted(current_vacancies):
+                    f.write('{}\n'.format(vacancy_id))
 
-    def generate_email_bodies(self, vacancies):
+    def get_vacancies(self):
+        return etree.parse(urllib.request.urlopen(self.feed_url))
+
+    def generate_email_bodies(self, vacancies, new_vacancies):
         html_vacancies = E('div')
         html = E('html',
                  E('head', E('style', self.html_css, type='text/css')),
@@ -69,6 +86,7 @@ class VacancyEmailer(object):
         text_body = [self.text_preamble]
         
         for i, vacancy in enumerate(vacancies.xpath('/vacancies/vacancy')):
+            vacancy_id = vacancy.attrib['id']
             html_description = etree.fromstring(vacancy.xpath("description[@media_type='text/html']")[0].text,
                                                 parser=etree.HTMLParser())[0][0]
             first_para = html_description.xpath(".//text()[normalize-space(.) and not(contains(., 'INTERNAL') or contains(., 'ADVERTISEMENT'))]")[0].strip()
@@ -81,15 +99,17 @@ class VacancyEmailer(object):
             tags = ' ({0})'.format(', '.join(tags)) if tags else ''
             try:
                 closes = dateutil.parser.parse(vacancy.find('closes').text)
-                closes = closes.strftime('%a, %d %b %Y, %I:%M %p')
             except Exception:
-                closes = 'unknown'
+                closes, closes_soon = 'unknown', False
+            else:
+                closes_soon = (closes - datetime.datetime.now(datetime.timezone.utc)).total_seconds() < 3600 * 24 * 2
+                closes = closes.strftime('%a, %d %b %Y, %I:%M %p')
             html_vacancy = E('div',
                 E('h1', vacancy.find('label').text),
                 E('div',
                   E('span', vacancy.find('salary').find('label').text, **{'class': 'salary'}),
                   '; closes: ',
-                  E('span', closes, **{'class': 'closes'}),
+                  E('span', closes, **{'class': 'closes' + (' closes-soon' if closes_soon else '')}),
                   tags,
                   **{'class': 'byline'}
                 ),
@@ -98,6 +118,9 @@ class VacancyEmailer(object):
                   E('a', u'More details\N{HORIZONTAL ELLIPSIS}', href=vacancy.find('webpage').text)),
                 **{'class': 'vacancy'}
             )
+            if vacancy_id in new_vacancies:
+                html_vacancy[0].text += " "
+                html_vacancy[0].append(E('span', '★ new', **{'class': 'new'}))
             html_vacancies.append(html_vacancy)
         
             text_body.extend([
@@ -142,7 +165,7 @@ class OnlyFirstWorkingDayOfWeekMixin(object):
     bank_holidays_json_url = 'https://www.gov.uk/bank-holidays.json'
 
     def __call__(self, *arg, **kwargs):
-        bank_holidays = json.load(urllib.urlopen(self.bank_holidays_json_url))
+        bank_holidays = json.loads(requests.get(self.bank_holidays_json_url).text)
         bank_holidays = set(datetime.datetime.strptime(d['date'], "%Y-%m-%d").date()
                             for d in bank_holidays['england-and-wales']['events'])
         today = datetime.date.today()
@@ -168,7 +191,7 @@ class OnlyFirstWorkingDayOfWeekMixin(object):
 
 class PrintEmailInsteadMixin(object):
     def send_email(self, msg):
-        print msg.as_string()
+        print(msg.as_string())
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
@@ -182,6 +205,9 @@ if __name__ == '__main__':
     argparser.add_argument('-w', '--only-first-working-day',
                            dest='first_working_day', action='store_true',
                            help="Only send if today is the first working day of the week")
+    argparser.add_argument('-s', '--seen-before',
+                           dest='seen_before', action='store',
+                           help='File containing vacancies seen before')
 
     args = argparser.parse_args()
     if args.loglevel:
@@ -198,4 +224,4 @@ if __name__ == '__main__':
         bases = (PrintEmailInsteadMixin,) + bases
 
     cls = type('VacancyEmailer', bases, {})
-    cls()()
+    cls(seen_before=args.seen_before)()

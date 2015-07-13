@@ -26,3 +26,13 @@ div a {
     margin-top: 0.5em;
 } 
 
+.closes-soon {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.new {
+    font-variant: small-caps;
+    font-size: 90%;
+    color: #DAA520;
+}
