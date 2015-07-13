@@ -1,6 +1,7 @@
 #!/bin/env python3
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
 import datetime
@@ -119,7 +120,7 @@ class VacancyEmailer(object):
                 ),
                 html_first_para,
                 E('div',
-                  E('a', u'More details\N{HORIZONTAL ELLIPSIS}', href=vacancy.find('webpage').text)),
+                  E('a', 'More details\N{HORIZONTAL ELLIPSIS}', href=vacancy.find('webpage').text)),
                 **{'class': 'vacancy'}
             )
             if vacancy_id in new_vacancies:
@@ -129,23 +130,23 @@ class VacancyEmailer(object):
         
             text_body.extend([
                 '_' * 70,
-                u'\n\n',
+                '\n\n',
                 textwrap.fill('*' + vacancy.find('label').text + '*'),
-                u'\n\n',
+                '\n\n',
                 vacancy.find('salary').find('label').text,
-                u'\nCloses: ',
+                '\nCloses: ',
                 closes,
                 tags,
-                u'\n\n',
+                '\n\n',
                 textwrap.fill(first_para),
-                u'\n\n'
-                u'More details: https://data.ox.ac.uk/v/',
+                '\n\n'
+                'More details: https://data.ox.ac.uk/v/',
                 vacancy.attrib['id'],
-                u'\n'
+                '\n'
             ])
         
         html_body = inline_css(etree.tostring(html, method='html'))
-        text_body = u''.join(text_body).encode('utf-8')
+        text_body = ''.join(text_body).encode('utf-8')
         
         return html_body, text_body
 
