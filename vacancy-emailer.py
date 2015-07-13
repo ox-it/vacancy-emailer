@@ -131,7 +131,8 @@ class VacancyEmailer(object):
             text_body.extend([
                 '_' * 70,
                 '\n\n',
-                textwrap.fill('*' + vacancy.find('label').text + '*'),
+                textwrap.fill(vacancy.find('label').text),
+                '  *NEW*' if vacancy_id in new_vacancies else '',
                 '\n\n',
                 vacancy.find('salary').find('label').text,
                 '\nCloses: ',
