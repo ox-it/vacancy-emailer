@@ -41,6 +41,14 @@ class VacancyEmailer(object):
         return os.environ['EMAIL_TO']
 
     @property
+    def email_cc(self):
+        return os.environ.get('EMAIL_CC')
+
+    @property
+    def email_bcc(self):
+        return os.environ.get('EMAIL_BCC')
+
+    @property
     def email_subject(self):
         return os.environ['EMAIL_SUBJECT']
 
@@ -155,15 +163,19 @@ class VacancyEmailer(object):
         msg = email.mime.multipart.MIMEMultipart('alternative')
         msg['Subject'] = self.email_subject
         msg['From'] = self.email_from
-        msg['To'] =self. email_to
+        msg['To'] = self.email_to
+        if self.email_cc:
+            msg['CC'] = self.email_cc
         msg.attach(email.mime.text.MIMEText(text_body, 'plain', 'utf-8'))
         msg.attach(email.mime.text.MIMEText(html_body, 'html', 'utf-8'))
         return msg
 
     def send_email(self, msg):
         s = smtplib.SMTP(self.smtp_server)
+        recipients = self.email_to.split(',') + (self.email_cc or '').split(',') + (self.email_bcc or '').split(',')
+        recipients = [email.utils.parseaddr(r.strip())[1] for r in recipients if r.strip()]
         s.sendmail(email.utils.parseaddr(self.email_from)[1],
-                   email.utils.parseaddr(self.email_to)[1],
+                   recipients,
                    msg.as_string())
         s.quit()
 
