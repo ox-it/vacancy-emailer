@@ -97,7 +97,10 @@ class VacancyEmailer(object):
                  E('body', self.html_preamble, html_vacancies))
         
         text_body = [self.text_preamble]
-        
+
+        if len(vacancies.xpath('/vacancies/vacancy')) == 0:
+            raise SystemExit(0)
+
         for i, vacancy in enumerate(vacancies.xpath('/vacancies/vacancy')):
             vacancy_id = vacancy.attrib['id']
             html_description = etree.fromstring(vacancy.xpath("description[@media_type='text/html']")[0].text,
