@@ -12,7 +12,10 @@ import os
 import smtplib
 import sys
 import textwrap
-import urllib.request
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 import dateutil.parser
 from inlinestyler.utils import inline_css
@@ -86,7 +89,7 @@ class VacancyEmailer(object):
                     f.write('{}\n'.format(vacancy_id))
 
     def get_vacancies(self):
-        return etree.parse(urllib.request.urlopen(self.feed_url))
+        return etree.parse(urlopen(self.feed_url))
 
     def generate_email_bodies(self, vacancies, new_vacancies):
         html_vacancies = E('div')
