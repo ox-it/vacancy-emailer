@@ -245,5 +245,6 @@ if __name__ == '__main__':
     if args.dry_run:
         bases = (PrintEmailInsteadMixin,) + bases
 
-    cls = type('VacancyEmailer', bases, {})
+    # wrap in str to force to non-unicode in Py2; no-op in Py3
+    cls = type(str('VacancyEmailer'), bases, {})
     cls(seen_before=args.seen_before)()
