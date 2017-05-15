@@ -1,5 +1,3 @@
-#!/bin/env python3
-
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -136,7 +134,7 @@ class VacancyEmailer(object):
             )
             if vacancy_id in new_vacancies:
                 html_vacancy[0].text += " "
-                html_vacancy[0].append(E('span', '★ new', **{'class': 'new'}))
+                html_vacancy[0].append(E('span', '\N{BLACK STAR} new', **{'class': 'new'}))
             html_vacancies.append(html_vacancy)
         
             text_body.extend([
