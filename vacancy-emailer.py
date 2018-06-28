@@ -9,6 +9,7 @@ import email.utils
 import logging
 import json
 import os
+import pytz
 import smtplib
 import sys
 import textwrap
@@ -96,7 +97,7 @@ class VacancyEmailer(object):
         html = E('html',
                  E('head', E('style', self.html_css, type='text/css')),
                  E('body', self.html_preamble, html_vacancies))
-        
+
         text_body = [self.text_preamble]
 
         if len(vacancies.xpath('/vacancies/vacancy')) == 0:
@@ -119,7 +120,7 @@ class VacancyEmailer(object):
             except Exception:
                 closes, closes_soon = 'unknown', False
             else:
-                closes_soon = (closes - datetime.datetime.now(datetime.timezone.utc)).total_seconds() < 3600 * 24 * 2
+                closes_soon = (closes - datetime.datetime.now(pytz.utc)).total_seconds() < 3600 * 24 * 2
                 closes = closes.strftime('%a, %d %b %Y, %I:%M %p')
             html_vacancy = E('div',
                 E('h1', vacancy.find('label').text),
@@ -139,7 +140,7 @@ class VacancyEmailer(object):
                 html_vacancy[0].text += " "
                 html_vacancy[0].append(E('span', '\N{BLACK STAR} new', **{'class': 'new'}))
             html_vacancies.append(html_vacancy)
-        
+
             text_body.extend([
                 '_' * 70,
                 '\n\n',
@@ -157,10 +158,10 @@ class VacancyEmailer(object):
                 vacancy.attrib['id'],
                 '\n'
             ])
-        
+
         html_body = inline_css(etree.tostring(html, method='html'))
         text_body = ''.join(text_body).encode('utf-8')
-        
+
         return html_body, text_body
 
     def compose_email(self, html_body, text_body):
@@ -191,7 +192,7 @@ class OnlyFirstWorkingDayOfWeekMixin(object):
         bank_holidays = set(datetime.datetime.strptime(d['date'], "%Y-%m-%d").date()
                             for d in bank_holidays['england-and-wales']['events'])
         today = datetime.date.today()
-        
+
         def working_day(d):
             return (d.weekday() < 5                            # Not a weekend
                 and d not in bank_holidays                     # Not a bank holiday
@@ -201,7 +202,7 @@ class OnlyFirstWorkingDayOfWeekMixin(object):
         if not working_day(today):
             logger.info("Today is not a working day; not continuing")
             return
-        
+
         # Look back through the week. If any of those days was also a working day, stop now.
         for i in range(today.weekday(), 0, -1):
             previous_date = today - datetime.timedelta(i)
